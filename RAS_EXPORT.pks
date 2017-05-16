@@ -6,19 +6,20 @@ create or replace PACKAGE      "RAS_EXPORT" AS
   -- grant select on DBA_XS_ROLES  to hr
   -- grant select on DBA_XS_DYNAMIC_ROLES to hr
   -- grant select on DBA_XS_ROLE_GRANTS to hr
-  -- grant select on sys.DBA_XS_SECURITY_CLASSES to hr
-  -- grant select on sys.DBA_XS_SECURITY_CLASS_DEP to hr
+  -- grant select on DBA_XS_SECURITY_CLASSES to hr
+  -- grant select on DBA_XS_SECURITY_CLASS_DEP to hr
   -- grant select on dba_xs_privileges to hr
   -- grant select on DBA_XS_IMPLIED_PRIVILEGES to hr
-  -- grant select on sys.DBA_XS_POLICIES to hr
+  -- grant select on DBA_XS_POLICIES to hr
   -- grant select on dba_xs_acls to hr
   -- grant select on dba_xs_aces to hr
   -- grant select on DBA_XS_REALM_CONSTRAINTS to hr
   -- grant select on DBA_XS_POLICIES to hr
   -- grant select on dba_xs_column_constraints to hr
   -- grant select on DBA_XS_APPLIED_POLICIES to hr
-  -- grant select on dba_xs_acl_parameters to hr
-  -- grant select on xs$validation_table to hr
+  -- grant select on dba_xs_acl_parameters to hr  
+  -- grant select on dba_xs_ns_templates to hr
+  -- grant select on dba_xs_ns_template_attributes to hr
   
   function export_all(p_delete_flag in varchar2)
   return clob;
@@ -51,3 +52,4 @@ create or replace PACKAGE      "RAS_EXPORT" AS
   procedure download_file(p_delete_flag in varchar2);
   
 END RAS_EXPORT;
+/

@@ -29,43 +29,43 @@ create or replace PACKAGE BODY RAS_EXPORT AS
        guid,
        external_source,
        description
-  from DBA_XS_ROLES
+  from dba_xs_roles
   where is_in_list(p_list,name) = 'Y';
         
   cursor xs_dynamic_roles(p_list in clob) is
   select name,
        duration,
-       decode(scope,'SESSION',SYS.XS_PRINCIPAL.SESSION_SCOPE,
-                    'REQUEST',SYS.XS_PRINCIPAL.REQUEST_SCOPE) as scope,
+       decode(scope,'SESSION',XS_PRINCIPAL.SESSION_SCOPE,
+                    'REQUEST',XS_PRINCIPAL.REQUEST_SCOPE) as scope,
        description
-  from DBA_XS_DYNAMIC_ROLES
+  from dba_xs_dynamic_roles
   where is_in_list(p_list,name) = 'Y';
         
   cursor xs_roles_grants_app(p_list in clob) is
   select grantee,
-       GRANTED_ROLE as role,
+       granted_role as role,
        start_date,
        end_date,
-       GRANTED_ROLE_TYPE
-  from DBA_XS_ROLE_GRANTS 
-  where GRANTED_ROLE_TYPE = 'APPLICATION'
+       granted_role_type
+  from dba_xs_role_grants 
+  where granted_role_type = 'APPLICATION'
     and is_in_list(p_list,grantee) = 'Y';
         
   cursor xs_roles_grants_db(p_list in clob) is
   select grantee,
-       GRANTED_ROLE as role,
+       granted_role as role,
        start_date,
        end_date,
-       GRANTED_ROLE_TYPE
-  from DBA_XS_ROLE_GRANTS 
-  where GRANTED_ROLE_TYPE = 'DATABASE'
+       granted_role_type
+  from dba_xs_role_grants 
+  where granted_role_type = 'DATABASE'
     and is_in_list(p_list,grantee) = 'Y';
 
   cursor xs_security_classes(p_list in clob) is    
   select name,
          owner,
          description 
-  from DBA_XS_SECURITY_CLASSES    
+  from dba_xs_security_classes    
   where is_in_list(p_list,owner||'.'||name) = 'Y';
   
   cursor xs_priveleges(p_list in clob) is
@@ -93,8 +93,8 @@ create or replace PACKAGE BODY RAS_EXPORT AS
           parent_acl,
           parent_acl_owner,
           case 
-            when instr(inheritance_type,'EXT') > 0  then 'SYS.XS_ACL.EXTENDED'
-            when instr(inheritance_type,'CON') > 0  then 'SYS.XS_ACL.CONSTRAINED'
+            when instr(inheritance_type,'EXT') > 0  then 'XS_ACL.EXTENDED'
+            when instr(inheritance_type,'CON') > 0  then 'XS_ACL.CONSTRAINED'
             else ''
          end  inheritance_type
    from dba_xs_acls
@@ -107,11 +107,11 @@ create or replace PACKAGE BODY RAS_EXPORT AS
           security_class_owner,
           principal,
           case 
-             when principal_type like 'APPLICATION' then 'SYS.XS_ACL.PTYPE_XS'
-             when principal_type like 'DATABASE' then 'SYS.XS_ACL.PTYPE_DB' 
-             when instr(principal_type,'DN') > 0 then 'SYS.XS_ACL.PTYPE_DN' 
-             when instr(principal_type,'EXT') > 0 then 'SYS.XS_ACL.PTYPE_EXTERNAL' 
-             else 'SYS.XS_ACL.PTYPE_XS'
+             when principal_type like 'APPLICATION' then 'XS_ACL.PTYPE_XS'
+             when principal_type like 'DATABASE' then 'XS_ACL.PTYPE_DB' 
+             when instr(principal_type,'DN') > 0 then 'XS_ACL.PTYPE_DN' 
+             when instr(principal_type,'EXT') > 0 then 'XS_ACL.PTYPE_EXTERNAL' 
+             else 'XS_ACL.PTYPE_XS'
            end principal_type,
           inverted_principal,       
           listagg('''"'||privilege||'"''',',') within group (order by ace_order) priv_list
@@ -124,11 +124,11 @@ create or replace PACKAGE BODY RAS_EXPORT AS
            security_class_owner,
            principal,
                      case 
-             when principal_type like 'APPLICATION' then 'SYS.XS_ACL.PTYPE_XS'
-             when principal_type like 'DATABASE' then 'SYS.XS_ACL.PTYPE_DB' 
-             when instr(principal_type,'DN') > 0 then 'SYS.XS_ACL.PTYPE_DN' 
-             when instr(principal_type,'EXT') > 0 then 'SYS.XS_ACL.PTYPE_EXTERNAL' 
-             else 'SYS.XS_ACL.PTYPE_XS'
+             when principal_type like 'APPLICATION' then 'XS_ACL.PTYPE_XS'
+             when principal_type like 'DATABASE' then 'XS_ACL.PTYPE_DB' 
+             when instr(principal_type,'DN') > 0 then 'XS_ACL.PTYPE_DN' 
+             when instr(principal_type,'EXT') > 0 then 'XS_ACL.PTYPE_EXTERNAL' 
+             else 'XS_ACL.PTYPE_XS'
            end,
            inverted_principal;
            
@@ -236,6 +236,32 @@ create or replace PACKAGE BODY RAS_EXPORT AS
         value
  from dba_xs_acl_parameters
  where is_in_list(p_acl_list,acl_owner||'.'||acl) = 'Y';     
+ 
+ cursor xs_ns_templates(p_list in clob)
+ is
+ select name,
+       handler_schema,
+       handler_package,
+       handler_function,
+       handler_status,
+       acl,
+       description
+ from dba_xs_ns_templates
+ where is_in_list(p_list,name) = 'Y';    
+ 
+ cursor xs_ns_parameters(p_list in clob)
+ is
+ select attribute,
+       namespace,
+       default_value,
+       case 
+          when firstread_event = 'YES' and modify_event = 'YES' then 3 -- FIRSTREAD_PLUS_UPDATE_EVENT
+          when firstread_event = 'NO'  and modify_event = 'YES' then 2 -- UPDATE_EVENT  
+          when firstread_event = 'YES' and modify_event = 'NO'  then 1 -- FIRSTREAD_EVENT 
+          else 0 --NO_EVENT
+       end event   
+ from dba_xs_ns_template_attributes
+ where is_in_list(p_list,namespace||'.'||attribute) = 'Y';
  -------------------------------------------------------------------------------
  
  function num(p_value in number)
@@ -346,7 +372,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin   
    for i in xs_users(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.DELETE_PRINCIPAL(
+       v_str := v_str||make_block('XS_PRINCIPAL.DELETE_PRINCIPAL(
           principal     => '''||i.name||''',
           delete_option => XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Drop User '||i.name,
@@ -354,7 +380,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
           );
      
      else
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.CREATE_USER( 
+       v_str := v_str||make_block('XS_PRINCIPAL.CREATE_USER( 
           name            => '||str(i.name)||',
           schema          => '||str(i.schema)||',
           status          => '||i.status||',
@@ -379,13 +405,13 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin
    for i in xs_regular_roles(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.DELETE_PRINCIPAL (
+       v_str := v_str||make_block('XS_PRINCIPAL.DELETE_PRINCIPAL (
           principal     => '||str(i.name)||',
           delete_option => XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Delete regular Role '||i.name,
           p_delete => TRUE);
      else      
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.CREATE_ROLE( 
+       v_str := v_str||make_block('XS_PRINCIPAL.CREATE_ROLE( 
           name            => '||str(i.name)||',
           enabled         => '||yes_no_to_boolean(i.default_enabled)||',
           start_date      => '||time_stmp(i.start_date)||',
@@ -408,7 +434,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
    v_first boolean default true;
  begin
    for i in xs_roles_grants_app(p_list) loop
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.GRANT_ROLES (
+       v_str := v_str||make_block('XS_PRINCIPAL.GRANT_ROLES (
           grantee       => '||str(i.grantee)||',
           role          => '||str(i.role)||',
           start_date    => '||time_stmp(i.start_date)||',
@@ -438,13 +464,13 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin
  for i in xs_dynamic_roles(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.DELETE_PRINCIPAL (
+       v_str := v_str||make_block('XS_PRINCIPAL.DELETE_PRINCIPAL (
           principal     => '||str(i.name)||',
           delete_option => XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Delete dynamic Role '||i.name,
           p_delete => TRUE);
      else
-       v_str := v_str||make_block('SYS.XS_PRINCIPAL.CREATE_DYNAMIC_ROLE( 
+       v_str := v_str||make_block('XS_PRINCIPAL.CREATE_DYNAMIC_ROLE( 
           name            => '||str(i.name)||',
           duration        => '||num(i.duration)||', 
           scope           => '||i.scope||', 
@@ -466,9 +492,9 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin
  for i in xs_security_classes(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_SECURITY_CLASS.DELETE_SECURITY_CLASS (
+       v_str := v_str||make_block('XS_SECURITY_CLASS.DELETE_SECURITY_CLASS (
           sec_class     => '||str(i.owner||'.'||i.name)||',
-          delete_option => SYS.XS_ADMIN_UTIL.CASCADE_OPTION);',
+          delete_option => XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Delete Security Class '||i.owner||'.'||i.name,
           p_delete => TRUE);
      else
@@ -492,7 +518,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  for i in xs_security_classes(p_list) loop
        for a in (select parent,
                         parent_owner
-                 from sys.DBA_XS_SECURITY_CLASS_DEP
+                 from DBA_XS_SECURITY_CLASS_DEP
                  where owner = i.owner
                   and security_class = i.name
                 )
@@ -510,21 +536,21 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  
  --!! check if implied_priveleges deletes automatically
  function export_implied_priveleges(p_list in clob,
-                            p_delete in varchar2 default 'N')
+                                    p_delete in varchar2 default 'N')
  return clob
  is
    v_str clob;
  begin
    for i in xs_implied_privileges(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_SECURITY_CLASS.REMOVE_IMPLIED_PRIVILEGES (
+       v_str := v_str||make_block('XS_SECURITY_CLASS.REMOVE_IMPLIED_PRIVILEGES (
           sec_class     => '||str(i.security_class_owner||'.'||i.security_class)||',
           priv          => '||str(i.privilege)||',
           implied_priv  => '||str(i.implied_privilege)||');',
           'Remove implified Privilege '||i.implied_privilege||' from '||i.security_class_owner||'.'||i.security_class||i.privilege,
           p_delete => TRUE);     
      else
-       v_str := v_str||make_block('SYS.XS_SECURITY_CLASS.ADD_IMPLIED_PRIVILEGES( 
+       v_str := v_str||make_block('XS_SECURITY_CLASS.ADD_IMPLIED_PRIVILEGES( 
           sec_class     => '||str(i.security_class_owner||'.'||i.security_class)||',
           priv          => '||str(i.privilege)||',
           implied_priv  => '||str(i.implied_privilege)||');',
@@ -572,14 +598,14 @@ create or replace PACKAGE BODY RAS_EXPORT AS
                                                  p_delete => 'Y');
          v_str := v_str||export_security_classes(i.security_class_owner||'.'||i.security_class);                                        
        else
-         v_str := v_str||make_block('SYS.XS_SECURITY_CLASS.REMOVE_PRIVILEGES (
+         v_str := v_str||make_block('XS_SECURITY_CLASS.REMOVE_PRIVILEGES (
             sec_class     => '||str(i.security_class_owner||'.'||i.security_class)||',
             priv          => '||str(i.name)||');',
             'Remove Privilege '||i.name||' from Security Class '||i.security_class_owner||'.'||i.security_class,
             p_delete => TRUE);
        end if;     
      else
-       v_str := v_str||make_block('SYS.XS_SECURITY_CLASS.ADD_PRIVILEGES( 
+       v_str := v_str||make_block('XS_SECURITY_CLASS.ADD_PRIVILEGES( 
           sec_class     => '||str(i.security_class_owner||'.'||i.security_class)||',
           priv          => '||str(i.name)||',
           description   => '||str(i.description)||');',
@@ -600,7 +626,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
    for i in xs_acl_parameters(p_acl_list => p_acl_list) 
    loop  
        v_str := v_str||make_block(' 
-              SYS.XS_ACL.ADD_ACL_PARAMETER    (
+              XS_ACL.ADD_ACL_PARAMETER    (
                       acl       => '||str(i.acl_owner||'.'||i.acl)||',
                       policy    => '||str(i.policy_owner||'.'||i.policy)||',
                       parameter => '||str(i.parameter)||',
@@ -648,13 +674,13 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin
    for i in xs_acls(p_list) loop
      if p_delete = 'Y' then
-       v_str := v_str||make_block('SYS.XS_ACL.DELETE_ACL (
+       v_str := v_str||make_block('XS_ACL.DELETE_ACL (
           acl           => '||str(i.owner||'.'||i.name)||',
           delete_option =>  XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Delete ACL '||i.owner||'.'||i.name,
           p_delete => TRUE);
      else       
-       v_str := v_str||make_block('SYS.XS_ACL.CREATE_ACL( 
+       v_str := v_str||make_block('XS_ACL.CREATE_ACL( 
           name          => '||str(i.owner||'.'||i.name)||',
           ace_list      => '||get_ace_list(p_acl_owner => i.owner,
                                            p_acl       => i.name)||',
@@ -679,7 +705,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
  begin
    for i in xs_acls(p_list) loop
      if i.parent_acl is not null then
-       v_str := v_str||make_block('SYS.XS_ACL.SET_PARENT_ACL( 
+       v_str := v_str||make_block('XS_ACL.SET_PARENT_ACL( 
           acl              => '||str(i.owner||'.'||i.name)||',
           parent           => '||str(i.parent_acl_owner||'.'||i.parent_acl)||',
           inheritance_type => '||str(i.inheritance_type)||');',
@@ -689,6 +715,62 @@ create or replace PACKAGE BODY RAS_EXPORT AS
 
    return v_str;
  end export_acls_inheritance; 
+ -------------------------------------------------------------------------------
+ 
+ function export_xs_ns_attributes(p_list in clob,
+                                  p_delete in varchar2 default 'N')
+ return clob
+ is
+   v_str clob;
+ begin
+   for i in xs_ns_parameters(p_list) loop
+     if p_delete = 'Y' then
+      v_str := v_str||make_block('XS_NAMESPACE.REMOVE_ATTRIBUTES (
+          template          => '||str(i.namespace)||',
+          attribute         => '||str(i.attribute)||');',
+          'Delete Attribute '||i.attribute||' from namespace '||i.namespace,
+          p_delete => TRUE);
+     else 
+       v_str := v_str||make_block('XS_NAMESPACE.ADD_ATTRIBUTES ( 
+          template          => '||str(i.namespace)||',
+          attribute         => '||str(i.attribute)||',
+          default_value     => '||str(i.default_value)||',          
+          attribute_events  => '||i.event||'); ',
+          'Create Attribute '||i.attribute||' for Namespace '||i.namespace);
+     end if;     
+   end loop;
+   
+   return v_str;
+ end export_xs_ns_attributes;
+ -------------------------------------------------------------------------------
+ 
+ function export_xs_ns_templates(p_list   in clob,
+                                 p_delete in varchar2 default 'N')
+ return clob
+ is
+   v_str clob;
+ begin
+   for i in xs_ns_templates(p_list) loop
+     if p_delete = 'Y' then
+       v_str := v_str||make_block('XS_NAMESPACE.DELETE_TEMPLATE (
+          template      => '||str(i.name)||',
+          delete_option => XS_ADMIN_UTIL.CASCADE_OPTION);',
+          'Delete Namespace Template '||i.name,
+          p_delete => TRUE);
+     else      
+       v_str := v_str||make_block('XS_NAMESPACE.CREATE_TEMPLATE( 
+          name            => '||str(i.name)||',
+          schema          => '||str(i.handler_schema)||',
+          package         => '||str(i.handler_package)||',
+          function        => '||str(i.handler_function)||',
+          acl             => '||str(nvl(i.acl,'NS_UNRESTRICTED_ACL'))||',          
+          description     => '||str(i.description)||'); ',
+          'Create Namespace Template '||i.name);       
+     end if;   
+   end loop;
+   
+   return v_str;
+ end export_xs_ns_templates; 
  -------------------------------------------------------------------------------
  
  function get_realm_constraints_list(p_policy_owner in varchar2,
@@ -756,7 +838,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
                                 p_policy       => p_policy) 
    loop  
        v_str := v_str||make_block(' 
-              SYS.XS_DATA_SECURITY.APPLY_OBJECT_POLICY(
+              XS_DATA_SECURITY.APPLY_OBJECT_POLICY(
                       policy       => '||str(i.policy_owner||'.'||i.policy)||',
                       schema       => '||str(i.schema)||',
                       object       => '||str(i.object)||',
@@ -779,7 +861,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
    for i in xs_applied_policies_del(p_policy_owner => p_policy_owner,
                                     p_policy       => p_policy) 
    loop  
-       v_str := v_str||make_block('SYS.XS_DATA_SECURITY.REMOVE_OBJECT_POLICY(
+       v_str := v_str||make_block('XS_DATA_SECURITY.REMOVE_OBJECT_POLICY(
                       policy       => '||str(i.policy_owner||'.'||i.policy)||',
                       schema       => '||str(i.schema)||',
                       object       => '||str(i.object)||');',
@@ -800,7 +882,7 @@ create or replace PACKAGE BODY RAS_EXPORT AS
    for i in xs_applied_policies_del(p_policy_owner => p_policy_owner,
                                     p_policy       => p_policy) 
    loop  
-       v_str := v_str||make_block('SYS.XS_DATA_SECURITY.'||i.status||'_OBJECT_POLICY(
+       v_str := v_str||make_block('XS_DATA_SECURITY.'||i.status||'_OBJECT_POLICY(
                          policy       => '||str(i.policy_owner||'.'||i.policy)||',
                          schema       => '||str(i.schema)||',
                          object       => '||str(i.object)||');',
@@ -821,13 +903,13 @@ create or replace PACKAGE BODY RAS_EXPORT AS
      if p_delete = 'Y' then
        v_str := v_str||export_applied_policies_del(p_policy_owner => i.owner,
                                                    p_policy       => i.name);
-       v_str := v_str||make_block('SYS.XS_DATA_SECURITY.DELETE_POLICY (
+       v_str := v_str||make_block('XS_DATA_SECURITY.DELETE_POLICY (
           policy        => '||str(i.owner||'.'||i.name)||',
-          delete_option =>  SYS.XS_ADMIN_UTIL.CASCADE_OPTION);',
+          delete_option =>  XS_ADMIN_UTIL.CASCADE_OPTION);',
           'Delete Policy '||i.owner||'.'||i.name,
           p_delete => TRUE);
      else       
-       v_str := v_str||make_block('SYS.XS_DATA_SECURITY.CREATE_POLICY( 
+       v_str := v_str||make_block('XS_DATA_SECURITY.CREATE_POLICY( 
           name                   => '||str(i.owner||'.'||i.name)||',
           realm_constraint_list  => '||get_realm_constraints_list(p_policy_owner => i.owner,
                                                                   p_policy       => i.name)||',  
@@ -859,7 +941,8 @@ create or replace PACKAGE BODY RAS_EXPORT AS
    v_acls_list         clob;
    v_statement         clob; 
    v_policies          clob;
-   
+   v_namespaces        clob;
+   v_attributes        clob;
  begin
     select listagg(c002,':') within group (order by c002) as objects
     into v_rrole_list
@@ -903,6 +986,18 @@ create or replace PACKAGE BODY RAS_EXPORT AS
     where COLLECTION_NAME = 'SELECTED_OBJECTS'
       and c001 = 'POL';
 
+    select listagg(c002,':') within group (order by c002) as objects
+    into v_namespaces
+    from apex_collections
+    where COLLECTION_NAME = 'SELECTED_OBJECTS'
+      and c001 = 'NS';
+      
+    select listagg(c002,':') within group (order by c002) as objects
+    into v_attributes
+    from apex_collections
+    where COLLECTION_NAME = 'SELECTED_OBJECTS'
+      and c001 = 'ATTR';      
+
     v_statement := v_statement||'SET ECHO OFF'||EOL||
                                 'SET SERVEROUTPUT ON'||EOL||EOL;
     
@@ -919,6 +1014,12 @@ create or replace PACKAGE BODY RAS_EXPORT AS
                                                     p_delete => 'Y');
 
       v_statement := v_statement||export_security_classes(p_list   => v_sclass_list,
+                                                          p_delete => 'Y');
+      
+      v_statement := v_statement||export_xs_ns_attributes(p_list => v_attributes,
+                                                          p_delete => 'Y');
+                                                          
+      v_statement := v_statement||export_xs_ns_templates(p_list => v_namespaces,
                                                           p_delete => 'Y');
                                                           
       v_statement := v_statement||export_acls(p_list    => v_acls_list,
@@ -951,6 +1052,11 @@ create or replace PACKAGE BODY RAS_EXPORT AS
     
     v_statement := v_statement||export_policies(p_list => v_policies); 
     
+    v_statement := v_statement||export_xs_ns_templates(p_list => v_namespaces);
+
+    v_statement := v_statement||export_xs_ns_attributes(p_list => v_attributes);
+
+    
     return v_statement||EOL||'EXIT'||EOL;
  end export_all;
  -------------------------------------------------------------------------------
@@ -968,12 +1074,12 @@ create or replace PACKAGE BODY RAS_EXPORT AS
         dbms_lob.createtemporary(v_blob,true);
         p_data := RAS_EXPORT.export_all(p_delete_flag => p_delete_flag);
         dbms_lob.converttoblob(v_blob, p_data, dbms_lob.getlength(p_data), v_desc_offset, v_src_offset, dbms_lob.default_csid, v_lang, v_warning);
-        sys.htp.init;
-        sys.owa_util.mime_header('text/txt', FALSE );
-        sys.htp.p('Content-length: ' || sys.dbms_lob.getlength( v_blob));
-        sys.htp.p('Content-Disposition: attachment; filename="ras_export.sql"' );
-        sys.owa_util.http_header_close;
-        sys.wpg_docload.download_file( v_blob );
+        htp.init;
+        owa_util.mime_header('text/txt', FALSE );
+        htp.p('Content-length: ' || dbms_lob.getlength( v_blob));
+        htp.p('Content-Disposition: attachment; filename="ras_export.sql"' );
+        owa_util.http_header_close;
+        wpg_docload.download_file( v_blob );
         dbms_lob.freetemporary(v_blob);
  exception
      when others then 
@@ -983,3 +1089,4 @@ create or replace PACKAGE BODY RAS_EXPORT AS
 
 
 END RAS_EXPORT;
+/
