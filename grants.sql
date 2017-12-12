@@ -22,3 +22,5 @@ grant select on dba_xs_column_constraints to &APP_SCHEMA;
 grant select on DBA_XS_APPLIED_POLICIES to &APP_SCHEMA;
 grant select on dba_xs_acl_parameters to &APP_SCHEMA;
 grant select on xs$validation_table to &APP_SCHEMA;
+grant select on dba_xs_ns_templates to &APP_SCHEMA;
+grant select on dba_xs_ns_template_attributes to &APP_SCHEMA;
